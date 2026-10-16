@@ -10,6 +10,7 @@
 #include "zygisk.hpp"
 #include "game.h"
 #include "log.h"
+#include "rva_writer.h"
 
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
@@ -32,7 +33,15 @@ public:
 
     void postAppSpecialize(const AppSpecializeArgs *) override {
         if (enable_hack) {
-            std::thread hack_thread(hack_prepare, game_data_dir, data, length);
+            char* dir  = game_data_dir;
+            void* d    = data;
+            size_t len = length;
+
+            std::thread hack_thread([dir, d, len]() {
+                register_metadata_hook();
+                hack_prepare(dir, d, len);
+                write_rva_file(dir);
+            });
             hack_thread.detach();
         }
     }
